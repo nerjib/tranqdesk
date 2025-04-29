@@ -565,6 +565,9 @@ video {
 .mb-6 {
   margin-bottom: 1.5rem;
 }
+.mr-2 {
+  margin-right: 0.5rem;
+}
 .mt-2 {
   margin-top: 0.5rem;
 }
@@ -592,8 +595,14 @@ video {
 .h-16 {
   height: 4rem;
 }
+.h-4 {
+  height: 1rem;
+}
 .w-16 {
   width: 4rem;
+}
+.w-4 {
+  width: 1rem;
 }
 .w-full {
   width: 100%;
@@ -606,6 +615,15 @@ video {
 }
 .border-collapse {
   border-collapse: collapse;
+}
+@keyframes spin {
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 .list-disc {
   list-style-type: disc;
@@ -13335,6 +13353,9 @@ video {
 .mb-6 {
   margin-bottom: 1.5rem;
 }
+.mr-2 {
+  margin-right: 0.5rem;
+}
 .mt-2 {
   margin-top: 0.5rem;
 }
@@ -13362,8 +13383,14 @@ video {
 .h-16 {
   height: 4rem;
 }
+.h-4 {
+  height: 1rem;
+}
 .w-16 {
   width: 4rem;
+}
+.w-4 {
+  width: 1rem;
 }
 .w-full {
   width: 100%;
@@ -13376,6 +13403,15 @@ video {
 }
 .border-collapse {
   border-collapse: collapse;
+}
+@keyframes spin {
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 .list-disc {
   list-style-type: disc;

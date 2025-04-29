@@ -37,7 +37,9 @@ function initializeDatabase() {
               payment_id TEXT
               is_paid BOOLEAN DEFAULT FALSE,
               amount TEXT,
-              status TEXT
+              status TEXT,
+              booking_status TEXT,
+              discount INTEGER
           )
       `);
     db.run(`
@@ -47,7 +49,11 @@ function initializeDatabase() {
             booking_id TEXT NOT NULL,
             date Timestamp not null,
             amount INTEGER,
-            status VARCHAR
+            status VARCHAR,
+            name TEXT,
+            email TEXT,
+            refund INTEGER,
+            reason VARCHAR
         )
     `);
   });
@@ -146,7 +152,7 @@ electron.ipcMain.handle("save-rooms-offline", async (event, rooms) => {
 });
 electron.ipcMain.handle("get-reservations-offline", async () => {
   return new Promise((resolve, reject) => {
-    db.all("SELECT * FROM bookings", [], (err, rows) => {
+    db.all("SELECT * FROM bookings ORDER BY id DESC", [], (err, rows) => {
       if (err) {
         reject(err);
       }
@@ -156,10 +162,10 @@ electron.ipcMain.handle("get-reservations-offline", async () => {
 });
 electron.ipcMain.handle("save-reservations-offline", async (event, reservations) => {
   try {
-    const stmt = db.prepare("INSERT OR REPLACE INTO bookings (id, booking_id, name, email, phone, room_types, check_in, check_out, guests, special_requests, payment_id, amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    const stmt = db.prepare("INSERT OR REPLACE INTO bookings (id, booking_id, name, email, phone, room_types, check_in, check_out, guests, special_requests, payment_id, amount, status, booking_status, discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     for (const reservation of reservations) {
       await new Promise((resolve, reject) => {
-        stmt.run(reservation.id, reservation.booking_id, reservation.name, reservation.email, reservation.phone, JSON.stringify(reservation.room_types), reservation.check_in, reservation.check_out, reservation.guests, reservation.special_requests, reservation.payment_id, reservation.amount, reservation.status, (err) => {
+        stmt.run(reservation.id, reservation.booking_id, reservation.name, reservation.email, reservation.phone, JSON.stringify(reservation.room_types), reservation.check_in, reservation.check_out, reservation.guests, reservation.special_requests, reservation.payment_id, reservation.amount, reservation.status, reservation.booking_status, reservation.discount, (err) => {
           if (err) {
             reject(err);
           } else {
@@ -178,7 +184,7 @@ electron.ipcMain.handle("save-reservations-offline", async (event, reservations)
 });
 electron.ipcMain.handle("get-payments-offline", async () => {
   return new Promise((resolve, reject) => {
-    db.all("SELECT * FROM payments", [], (err, rows) => {
+    db.all("SELECT * FROM payments ORDER BY id  DESC", [], (err, rows) => {
       if (err) {
         reject(err);
       }
@@ -188,10 +194,10 @@ electron.ipcMain.handle("get-payments-offline", async () => {
 });
 electron.ipcMain.handle("save-payments-offline", async (event, payments) => {
   try {
-    const stmt = db.prepare("INSERT OR REPLACE INTO payments (payment_id, booking_id, date, amount, status) VALUES (?, ?, ?, ?, ?)");
+    const stmt = db.prepare("INSERT OR REPLACE INTO payments (payment_id, booking_id, date, amount, status, name, email, reason, refund) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     for (const payment of payments) {
       await new Promise((resolve, reject) => {
-        stmt.run(payment.payment_id, payment.booking_id, payment.created_at, payment.amount, payment.status, (err) => {
+        stmt.run(payment.payment_id, payment.booking_id, payment.created_at, payment.amount, payment.status, payment?.book_data?.name, payment?.book_data?.email, payment.reason, payment.refund, (err) => {
           if (err) {
             reject(err);
           } else {

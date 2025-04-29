@@ -59,10 +59,20 @@ function initializeDatabase() {
               payment_id TEXT
               is_paid BOOLEAN DEFAULT FALSE,
               amount TEXT,
-              status TEXT
+              status TEXT,
+              booking_status TEXT,
+              discount INTEGER
           )
       `);
       // db.run(`ALTER TABLE bookings ADD COLUMN status TEXT`);
+      // db.run(`ALTER TABLE bookings ADD COLUMN booking_status TEXT`);
+      // db.run(`ALTER TABLE bookings ADD COLUMN discount INTEGER`);
+
+      // db.run(`ALTER TABLE payments add column name VARCHAR`);
+      // db.run(`ALTER TABLE payments add column email VARCHAR`);
+      // db.run(`ALTER TABLE payments add column refund INTEGER`);
+      // db.run(`ALTER TABLE payments add column reason VARCHAR`);
+
       db.run(`
         CREATE TABLE IF NOT EXISTS payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,7 +80,11 @@ function initializeDatabase() {
             booking_id TEXT NOT NULL,
             date Timestamp not null,
             amount INTEGER,
-            status VARCHAR
+            status VARCHAR,
+            name TEXT,
+            email TEXT,
+            refund INTEGER,
+            reason VARCHAR
         )
     `);
         //Create other tables here
@@ -201,7 +215,7 @@ ipcMain.handle('save-rooms-offline', async (event, rooms) => {
 
 ipcMain.handle('get-reservations-offline', async () => {
   return new Promise((resolve, reject) => {
-      db.all('SELECT * FROM bookings', [], (err, rows) => {
+      db.all('SELECT * FROM bookings ORDER BY id DESC', [], (err, rows) => {
           if (err) {
               reject(err);
           }
@@ -212,10 +226,10 @@ ipcMain.handle('get-reservations-offline', async () => {
 
 ipcMain.handle('save-reservations-offline', async (event, reservations) => {
   try {
-      const stmt = db.prepare('INSERT OR REPLACE INTO bookings (id, booking_id, name, email, phone, room_types, check_in, check_out, guests, special_requests, payment_id, amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+      const stmt = db.prepare('INSERT OR REPLACE INTO bookings (id, booking_id, name, email, phone, room_types, check_in, check_out, guests, special_requests, payment_id, amount, status, booking_status, discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
       for (const reservation of reservations) {
           await new Promise((resolve, reject) => {
-              stmt.run(reservation.id, reservation.booking_id, reservation.name, reservation.email, reservation.phone, JSON.stringify(reservation.room_types), reservation.check_in, reservation.check_out, reservation.guests, reservation.special_requests, reservation.payment_id, reservation.amount, reservation.status, (err) => {
+              stmt.run(reservation.id, reservation.booking_id, reservation.name, reservation.email, reservation.phone, JSON.stringify(reservation.room_types), reservation.check_in, reservation.check_out, reservation.guests, reservation.special_requests, reservation.payment_id, reservation.amount, reservation.status, reservation.booking_status, reservation.discount, (err) => {
                   if (err) {
                       reject(err);
                   } else {
@@ -236,7 +250,7 @@ ipcMain.handle('save-reservations-offline', async (event, reservations) => {
 
 ipcMain.handle('get-payments-offline', async () => {
   return new Promise((resolve, reject) => {
-      db.all('SELECT * FROM payments', [], (err, rows) => {
+      db.all('SELECT * FROM payments ORDER BY id  DESC', [], (err, rows) => {
           if (err) {
               reject(err);
           }
@@ -247,10 +261,10 @@ ipcMain.handle('get-payments-offline', async () => {
 
 ipcMain.handle('save-payments-offline', async (event, payments) => {
   try {
-      const stmt = db.prepare('INSERT OR REPLACE INTO payments (payment_id, booking_id, date, amount, status) VALUES (?, ?, ?, ?, ?)');
+      const stmt = db.prepare('INSERT OR REPLACE INTO payments (payment_id, booking_id, date, amount, status, name, email, reason, refund) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
       for (const payment of payments) {
           await new Promise((resolve, reject) => {
-              stmt.run(payment.payment_id, payment.booking_id, payment.created_at, payment.amount, payment.status, (err) => {
+              stmt.run(payment.payment_id, payment.booking_id, payment.created_at, payment.amount, payment.status, payment?.book_data?.name, payment?.book_data?.email,payment.reason, payment.refund, (err) => {
                   if (err) {
                       reject(err);
                   } else {

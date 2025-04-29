@@ -8,6 +8,7 @@ import { baseUrl } from '../helpers/https';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { hideLoader, showLoader } from '../utils/loader';
+import { Loader2 } from 'lucide-react';
 
 const RoomTypeSelect = ({ roomType, setRoomType, rooms, checkIn, checkOut }) => {
  
@@ -90,11 +91,13 @@ const Form = () => {
   const [checkOut, setCheckOut] = useState('');
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingRooms, setIsLoadingRooms] = useState(false);
 
   useEffect(() => {
           if (!checkIn || !checkOut) return;
           const fetchRooms = async () => {
               try {
+                setIsLoadingRooms(true);
                   const response = await fetch(`${baseUrl}/rooms/${checkIn}/${checkOut}`);
                   const data = await response.json();
                   setRooms(data.data);
@@ -102,6 +105,9 @@ const Form = () => {
                   console.log({ data });
               } catch (error) {
                   console.error('Error fetching rooms:', error);
+              } finally {
+                  hideLoader();
+                  setIsLoadingRooms(false);
               }
           };
   
@@ -357,7 +363,13 @@ const Form = () => {
         {/* Room and Charges */}
         <div className="mb-4">
           <h2 className="text-lg font-semibold mb-2">Room and Charges</h2>
+           {isLoadingRooms ? (
+              <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Fetching available rooms...
+              </>
+              ) : (
           <RoomTypeSelect roomType={roomType} setRoomType={setRoomType} rooms={rooms} checkIn={checkIn} checkOut={checkOut}/>
+              )}
           <h4 className="text-lg font-semibold mb-2">Number of Guest</h4>
           <input
             type="number"
@@ -390,7 +402,16 @@ const Form = () => {
             <button onClick={sendEmail} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Send Email PDF</button>
         </div> */}
         <div className="mt-6">
-            <button disabled={isLoading} onClick={handleBooking} className="bg-[#ff6700] hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Submit Booking</button>
+            <button disabled={isLoading} onClick={handleBooking} className="bg-[#ff6700] hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+               {isLoading ? (
+                  <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...
+                  </>
+                  ) : (
+              'Submit Booking'
+                  )}
+              
+            </button>
         </div> 
         <div className="text-sm text-gray-600">
           {/* <p>Thank you for choosing Hotel XYZ. Please review the charges above. Payments can be made via credit card at the front desk or online at www.hotelxyz.com/pay.</p> */}

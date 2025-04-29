@@ -4,6 +4,13 @@ import 'react-datepicker/dist/react-datepicker.css';
 import moment from 'moment'; // For date formatting and calculations
 import { baseUrl } from '../helpers/https';
 import { currencyFormatter } from '../helpers/utils';
+import AntDropdown from '../components/DropDown/antDropDown';
+import { Modal } from 'antd';
+import axios from 'axios';
+import Swal from 'sweetalert2';
+import { Eye, EyeOff, Loader2 } from "lucide-react"
+import { showLoader } from '../utils/loader';
+
 
 const Payments = () => {
     const [payments, setPayments] = useState([]);
@@ -16,8 +23,16 @@ const Payments = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [paymentsPerPage] = useState(10);
     const [online, setOnline] = useState(navigator.onLine);
+    const [showDiscountModal, setShowDiscountModal] = useState(false);
+    const [selectedRow, setSelectedRow] = useState([]);
+    const [reason, setReason] = useState("Reservation Cancelled");
+    const [refundAmount, setRefundFee] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
+    const [reload, setReload] = useState(false);
+    const [isLoadingTable, setIsLoadingTable] = useState(false);
 
     useEffect(() => {
+        // showLoader();
         function handleOnline() {
             setOnline(true);
             synchronizeData();
@@ -41,9 +56,10 @@ const Payments = () => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };
-    }, [online]);
+    }, [online, reload]);
 
     const synchronizeData = async () => {
+        setIsLoadingTable(true);
         try {
             const response = await fetch(`${baseUrl}/payments`);
             if (!response.ok) {
@@ -58,6 +74,7 @@ const Payments = () => {
             fetchOfflinePayments();
         } finally {
             setLoading(false);
+            setIsLoadingTable(false);
         }
     };
 
@@ -148,9 +165,98 @@ const Payments = () => {
         pageNumbers.push(i);
     }
 
+    const handleRefund = async () => {
+            const data ={
+                reason,
+                amount: refundAmount,
+                book_data: selectedRow
+            }
+            // alert( JSON.stringify(data));
+            // return;
+            try {
+                setIsLoading(true);
+                // showLoader();
+            const res = await axios.put(`${baseUrl}/booking/refund/${selectedRow?.payment_id}`, data);
+    
+            if(res?.data?.status) {
+                setReload(!reload);
+                setIsLoading(false);
+                Swal.fire('done', 'Refund updated successfully', 'success');
+                setRefundFee(0);
+                setShowDiscountModal(false);
+            }
+        }catch(e){
+            setIsLoading(false);
+            console.log(e)
+        } finally{
+            setIsLoading(false);
+            // hideLoader();
+        }
+        }
+    
 
+    const dropDownOptions = ["Refund"];
+  const handleDropdownAction = (item, row) => {
+    setSelectedRow(row)
+    if (item === "Refund") setShowDiscountModal(true);
+  };
     return (
         <div className="container mx-auto p-4">
+            <Modal
+                open={showDiscountModal}
+                closable={false}
+                footer={null}
+                centered
+                onCancel={() => {
+                    setShowDiscountModal(false);
+                }}
+                bodyStyle={{
+                    padding: "23px 73px 44px 73px",
+                    borderRadius: "12px",
+                    width: "100%",
+                }}
+                >
+                    <div className='mt-4'>Reason for refund</div>
+                    <select
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        className="border rounded p-2 flex-grow"
+                    >
+                        <option value="Reservation Cancelled">Reservation Cancelled</option>
+                        <option value="Caution fee refund"> Caution Fee Refund</option>
+                    </select>
+                    <div className='mt-4'>Refund Amount {selectedRow.name}</div>
+                    <input
+                        type="number"
+                        value={refundAmount}
+                        onChange={(e) => setRefundFee(e.target.value)}
+                        className="border rounded p-2 flex-grow"
+                    />
+                    <div className='row' style={{ display: 'flex', flexDirection: 'row'}}>
+                    <div className="mt-6">
+                        <button onClick={()=> {
+                            setShowDiscountModal(false);
+                            setRefundFee(0);
+                        }}
+                    className="bg-red-700 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                        Cancel
+                    </button>
+                    </div> 
+                    <div className="mt-6">
+                        <button onClick={handleRefund} className="bg-[#ff6700] hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                        {/* Process Refund */}
+                        {isLoading ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
+                        </>
+                        ) : (
+                        "Process Refund"
+                        )}
+                    </button>
+                    </div> 
+    
+                    </div>
+                </Modal>
             <h2 className="text-2xl font-bold mb-4">Payments</h2>
 
             {/* Filters */}
@@ -195,10 +301,20 @@ const Payments = () => {
                         <th className="border p-2">Customer Email</th>
                         <th className="border p-2">Date</th>
                         <th className="border p-2">Amount</th>
+                        <th className="border p-2">Refund</th>
+                        <th className="border p-2">Reason</th>
                         <th className="border p-2">Status</th>
+                        <th className="border p-2">Action</th>
                         
                     </tr>
                 </thead>
+                {isLoadingTable ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> ...
+              </>
+            ) : (
+              
+            
                     <tbody>
                         {/* ... table data using filteredPayments */}
                          {currentPayments.filter(payment => {
@@ -218,15 +334,26 @@ const Payments = () => {
                         }).map(payment => (
                             <tr key={payment.id}>
                                 <td className="border p-2">{payment.payment_id}</td>
-                                <td className="border p-2">{payment.book_data?.name}</td>
-                                <td className="border p-2">{payment.book_data?.email}</td>
+                                <td className="border p-2">{payment.book_data?.name ??  payment.name ?? 'NA'}</td>
+                                <td className="border p-2">{payment.book_data?.email  ?? payment.email ?? 'NA'}</td>
                                 <td className="border p-2">{formatDate(payment.created_at)}</td>
                                 <td className="border p-2">{currencyFormatter(payment.amount)}</td>
+                                <td className="border p-2">{payment.refund ? currencyFormatter(payment.refund) : 'N/A'}</td>
+                                <td className="border p-2">{payment.reason ?? 'N/A'}</td>
                                 <td className="border p-2">{payment.status === 'success' ? 'Paid' : 'Unpaid'}</td>
+                                <td className="border p-2">
+                                  <AntDropdown
+                                    dropDownOptions={dropDownOptions}
+                                    handleDropdownAction={(item) => handleDropdownAction(item, payment)}
+                                    userId={payment}
+                                    isArrow
+                                  />
+                                </td>
                                 {/* Add other payment data */}
                             </tr>
                         ))}
                     </tbody>
+                    )}
                 </table>
             </div>
             <nav className="mt-4 flex justify-center">
